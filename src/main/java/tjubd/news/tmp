@@ -1,0 +1,40 @@
+package tjubd.news;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.*;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.io.*;
+
+import java.io.*;
+import java.util.*;
+public class extractKey {
+	public static void main(String[] args) throws Exception {
+
+		Configuration conf = new Configuration();
+
+		Path seqFile = new Path(args[1]);
+		conf.set("io.compression.codecs", "com.hadoop.compression.lzo.LzoCodec");
+		conf.set("fs.default.name", "hdfs://192.168.1.101");
+		FileSystem fs = FileSystem.get(conf);
+		FileStatus[] fileStatuses = fs.listStatus(seqFile);
+		BytesWritable key = new BytesWritable();
+		MapWritable value = new MapWritable();
+		HashSet<String> keyset = new HashSet<String>();
+		for (int j = 0; j < fileStatuses.length; j++) {// 循环，一次读一条新闻
+			SequenceFile.Reader reader = new SequenceFile.Reader(conf,
+					SequenceFile.Reader.file(fileStatuses[j].getPath()));
+			while (reader.next(key, value)) {
+				Set<Writable> vs = value.keySet();// 字段集合
+				for (Writable it : vs) {
+					keyset.add(it.toString());
+				}
+			}
+			reader.close();
+		}
+		BufferedWriter bw = new BufferedWriter(new FileWriter("/home/zhangz/W/keySet".concat(".csv")));
+		for (String k : keyset) {
+			bw.write(k);
+			bw.newLine();
+		}
+		bw.close();		
+	}
+}

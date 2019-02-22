@@ -1,0 +1,79 @@
+package tjubd.news;
+
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.*;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.io.*;
+
+import java.io.*;
+import java.util.*;
+
+/**
+ * Created by wangshuai on 2018/12/3.
+ */
+public class SwitchSequence {
+	public static void main(String[] args) throws Exception {
+		SwitchSequence ssq=new SwitchSequence(args);
+		ssq.extractKeys();
+		ssq.saveKeys();
+	}
+	Configuration conf;
+	FileSystem filesystem;
+	Path path;
+	HashSet<String> keysets;
+	SwitchSequence(String[] args) throws Exception
+	{
+
+		conf = new Configuration();
+		conf.set("io.compression.codecs", "com.hadoop.compression.lzo.LzoCodec");
+		conf.set("fs.default.name", "hdfs://192.168.1.101");
+		path = new Path(args[1]);
+		filesystem = FileSystem.get(conf);	
+		keysets = new HashSet<String>();
+	}
+	
+	public void extractKeys() throws FileNotFoundException, IOException
+	{
+		RemoteIterator<LocatedFileStatus> fs=filesystem.listFiles(path, true);
+		while(fs.hasNext())
+		{
+			LocatedFileStatus localFileStatus = fs.next();
+			//HashSet<String> keyset = new HashSet<String>();
+			BytesWritable key = new BytesWritable();
+			MapWritable value = new MapWritable();
+			SequenceFile.Reader reader = new SequenceFile.Reader(conf,
+					SequenceFile.Reader.file(localFileStatus.getPath()));
+			while (reader.next(key, value)) {
+				Set<Writable> vs = value.keySet();// 字段集合
+				for (Writable it : vs) {
+					//keyset.add(it.toString());
+					keysets.add(it.toString());
+				}
+			}
+			reader.close();
+//			localFileStatus.getPath().toString().substring(21);
+//			File localPath=new File("/home/zhangz/W/".concat(localFileStatus.getPath().getParent().toString().substring(21)));
+//			if(!localPath.exists())
+//			{
+//				localPath.mkdirs();
+//				System.out.println("Create folder:"+localPath.toString());
+//			}
+//			BufferedWriter bw = new BufferedWriter(new FileWriter( "/home/zhangz/W/".concat(localFileStatus.getPath().toString().substring(21)).concat(".csv")));
+//			for (String k : keyset) {
+//				bw.write(k);
+//				bw.newLine();
+//			}
+//			bw.close();				
+		}
+	}
+	
+	public void saveKeys() throws IOException
+	{
+		BufferedWriter bw = new BufferedWriter(new FileWriter( "/home/zhangz/W/keysets.csv"));
+		for (String k : keysets) {
+			bw.write(k);
+			bw.newLine();
+		}
+		bw.close();		
+	}	
+}
